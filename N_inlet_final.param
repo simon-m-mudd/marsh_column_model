@@ -1,0 +1,26 @@
+Tidal_Period: 12
+Tidal_Amplitude: 0.7
+Mean_Tide: 1.8
+tidal_periods_per_day: 2
+max_depth: 0.55	
+min_depth: 0.0
+max_bmass: 2500
+theta_bmin: 0.0
+nu_Gp: 0.0138
+nu_Gmin: 0.000
+phase_shift: 56
+gamma_bg_biomass_ratio: 0.25
+SLR: 0.005 
+theta_bm: -6.8
+D_mbm: 4.8
+day_ps: 182
+number_of_particle_types: 7
+Pb_type: 5
+CRS_Pb_Supply: 0.001
+root_type: 4
+number_of_carbon_types: 2
+carbon_types: 2 3
+chi_carbon_types: 0.05 0.95
+particle_concentrations_0: 0.01 0.02 0 0 0 0 0
+particle_diamters: 0.000005 0.00001 0.00001 0.00005 0.00005 0.00005 0.00005
+particle_settling_velocities: 0.00005 0.00002 0.00005 0.00005 0.00005 0.00005 0.00005
