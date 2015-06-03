@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+#include <cmath>
 #include "sediment_stack.hpp"
 #include "sediment_layer.hpp"
 #include "depo_particle.hpp"
