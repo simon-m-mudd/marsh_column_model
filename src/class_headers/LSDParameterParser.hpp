@@ -55,9 +55,6 @@
 #include <vector>
 #include <algorithm>
 #include "TNT/tnt.h"
-#include "LSDRaster.hpp"
-#include "LSDIndexRaster.hpp"
-#include "LSDStatsTools.hpp"
 using namespace std;
 using namespace TNT;
 

@@ -128,9 +128,9 @@ vector<double> sediment_stack::create_growth_index_deep(double gamma, double efo
                                                         double exp_multiplier)
  {
   // the exp multplier is e^n/(e^n-1) where n
-  // is teh efolding_multiplier and is derived from
+  // is the efolding_multiplier and is derived from
   // the relationship between total biomass or mortality and the
-  // mortality or biomass at the surface. (see notes_on_growth.nb
+  // mortality or biomass at the surface. (see notes_on_growth.nb)
 
  // first get the depths:
   int n_layers = layers.size();

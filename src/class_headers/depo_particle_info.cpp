@@ -50,12 +50,13 @@ void depo_particle_info::create( const char* fname )
     t_type_index.push_back(temp_ti);
     t_type_name.push_back(t_ptype);
     t_e_0_vec.push_back(t_e0);
+    t_sigma_0_vec.push_back(t_sigma_0);
     t_compression_index_vec.push_back(t_compression_index);
     t_rho_vec.push_back(t_rho);
     t_mass_vec.push_back(t_mass);
     t_k_0_vec.push_back(t_k_0);
     t_gamma_vec.push_back(t_gamma);
-    t_sigma_0_vec.push_back(t_sigma_0);
+
    }
   type_index = t_type_index;
   type_name = t_type_name;

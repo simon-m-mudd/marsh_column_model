@@ -416,7 +416,7 @@ double column_model(double RSLR, double kfactor, double bfactor, double tA, doub
 
 	int n_carbon_types;		// the number of carbon types
 	vector<int> carbon_types; // indices into carbon tyes, these should
-							// match the indeces in dpart.dlist
+							// match the indices in dpart.dlist
 	vector<double> chi_carbon_types;
   							// the mass fractions of the carbon types
   							// the mass fractions should add to 1
