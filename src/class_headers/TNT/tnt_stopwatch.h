@@ -40,7 +40,7 @@ class Stopwatch {
         double total_;
 
     public:
-        Stopwatch();
+        inline Stopwatch();
         inline void start();
         inline double stop();
 		inline double read();
@@ -48,7 +48,7 @@ class Stopwatch {
 		inline int running();
 };
 
-Stopwatch::Stopwatch() : running_(0), start_time_(0.0), total_(0.0) {}
+inline Stopwatch::Stopwatch() : running_(0), start_time_(0.0), total_(0.0) {}
 
 void Stopwatch::start() 
 {
@@ -88,7 +88,7 @@ inline double Stopwatch::read()
 }
 
 
-}
+} /* TNT namespace */
 #endif
     
 

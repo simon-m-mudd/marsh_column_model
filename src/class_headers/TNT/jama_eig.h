@@ -6,9 +6,14 @@
 #include "tnt_array2d.h"
 #include "tnt_math_utils.h"
 
+#include <algorithm>
+// for min(), max() below
+
+#include <cmath>
+// for abs() below
 
 using namespace TNT;
-
+using namespace std;
 
 namespace JAMA
 {

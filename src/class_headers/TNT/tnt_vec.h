@@ -298,11 +298,11 @@ std::ostream& operator<<(std::ostream &s, const Vector<T> &A)
 {
     Subscript N=A.dim();
 
-    s <<  N << endl;
+    s <<  N << "\n";
 
     for (Subscript i=0; i<N; i++)
-        s   << A[i] << " " << endl;
-    s << endl;
+        s   << A[i] << " " << "\n";
+    s << "\n";
 
     return s;
 }

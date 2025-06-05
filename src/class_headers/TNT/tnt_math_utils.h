@@ -1,8 +1,8 @@
 #ifndef MATH_UTILS_H
 #define MATH_UTILS_H
 
-#include <math.h>
-/* needed for sqrt() below */
+/* needed for fabs, sqrt() below */
+#include <cmath>
 
 
 
@@ -23,39 +23,10 @@ Real hypot(const Real &a, const Real &b)
 	else
 	{
 		Real c = b/a;
-		return abs(a) * sqrt(1 + c*c);
+		return fabs(a) * sqrt(1 + c*c);
 	}
 }
-
-/**
-	@returns the minimum of scalars a and b.
-*/
-template <class Scalar>
-Scalar min(const Scalar &a, const Scalar &b)
-{
-	return  a < b ? a : b;
-}
-
-/**
-	@returns the maximum of scalars a and b.
-*/
-template <class Scalar>
-Scalar max(const Scalar &a, const Scalar &b)
-{
-	return  a > b ? a : b;
-}
-
-/**
-	@returns the absolute value of a real (no-complex) scalar.
-*/
-template <class Real>
-Real abs(const Real &a)
-{
-	return  (a > 0 ? a : -a);
-}
-
-}
-
+} /* TNT namespace */
 
 
 

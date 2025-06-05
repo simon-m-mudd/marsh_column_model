@@ -84,7 +84,7 @@ class i_refvec
 template <class T>
 void i_refvec<T>::copy_(T* p, const T* q, const T* e)
 {
-	for (T* t=p; t<e; t++, q++)
+	for (T* t=p; q<e; t++, q++)
 		*t= *q;
 }
 
@@ -201,7 +201,7 @@ void i_refvec<T>::destroy()
 template<class T>
 int i_refvec<T>::is_null() const
 {
-	return (data == NULL ? 1 : 0);
+	return (data_ == NULL ? 1 : 0);
 }
 
 /*
@@ -233,6 +233,10 @@ i_refvec<T>::~i_refvec()
 
 
 } /* namespace TNT */
+
+
+
+
 
 #endif
 /* TNT_I_REFVEC_H */

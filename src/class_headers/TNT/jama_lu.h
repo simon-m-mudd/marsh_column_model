@@ -2,9 +2,11 @@
 #define JAMA_LU_H
 
 #include "tnt.h"
+#include <algorithm>
+//for min(), max() below
 
 using namespace TNT;
-
+using namespace std;
 
 namespace JAMA
 {
@@ -79,11 +81,8 @@ class LU
 
    // Use a "left-looking", dot-product, Crout/Doolittle algorithm.
 
-	  int i=0;
-	  int j=0;
-	  int k=0;
 
-      for (i = 0; i < m; i++) {
+      for (int i = 0; i < m; i++) {
          piv[i] = i;
       }
       pivsign = 1;
@@ -92,11 +91,11 @@ class LU
 
       // Outer loop.
 
-      for (j = 0; j < n; j++) {
+      for (int j = 0; j < n; j++) {
 
          // Make a copy of the j-th column to localize references.
 
-         for (i = 0; i < m; i++) {
+         for (int i = 0; i < m; i++) {
             LUcolj[i] = LU_[i][j];
          }
 
@@ -107,9 +106,9 @@ class LU
 
             // Most of the time is spent in the following dot product.
 
-            int kmax = i < j ? i : j;
+            int kmax = min(i,j);
             double s = 0.0;
-            for (k = 0; k < kmax; k++) {
+            for (int k = 0; k < kmax; k++) {
                s += LUrowi[k]*LUcolj[k];
             }
 
@@ -125,6 +124,7 @@ class LU
             }
          }
          if (p != j) {
+		    int k=0;
             for (k = 0; k < n; k++) {
                double t = LU_[p][k]; 
 			   LU_[p][k] = LU_[j][k]; 
@@ -139,7 +139,7 @@ class LU
          // Compute multipliers.
          
          if ((j < m) && (LU_[j][j] != 0.0)) {
-            for (i = j+1; i < m; i++) {
+            for (int i = j+1; i < m; i++) {
                LU_[i][j] /= LU_[j][j];
             }
          }
@@ -203,7 +203,7 @@ class LU
    */
 
    Array1D<int> getPivot () {
-      return p;
+      return piv;
    }
 
 

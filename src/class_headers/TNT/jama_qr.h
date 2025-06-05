@@ -73,7 +73,7 @@ public:
          // Compute 2-norm of k-th column without under/overflow.
          Real nrm = 0;
          for (i = k; i < m; i++) {
-            nrm = hypot(nrm,QR_[i][k]);
+            nrm = TNT::hypot(nrm,QR_[i][k]);
          }
 
          if (nrm != 0.0) {
@@ -225,27 +225,26 @@ public:
 	  }
 
 	  TNT::Array1D<Real> x = b.copy();
-	  int i=0, j=0, k=0;
 
       // Compute Y = transpose(Q)*b
-      for (k = 0; k < n; k++) 
+      for (int k = 0; k < n; k++) 
 	  {
             Real s = 0.0; 
-            for (i = k; i < m; i++) 
+            for (int i = k; i < m; i++) 
 			{
                s += QR_[i][k]*x[i];
             }
             s = -s/QR_[k][k];
-            for (i = k; i < m; i++) 
+            for (int i = k; i < m; i++) 
 			{
                x[i] += s*QR_[i][k];
             }
       }
       // Solve R*X = Y;
-      for (k = n-1; k >= 0; k--) 
+      for (int k = n-1; k >= 0; k--) 
 	  {
          x[k] /= Rdiag[k];
-         for (i = 0; i < k; i++) {
+         for (int i = 0; i < k; i++) {
                x[i] -= x[k]*QR_[i][k];
          }
       }
@@ -253,7 +252,7 @@ public:
 
 	  /* return n x nx portion of X */
 	  TNT::Array1D<Real> x_(n);
-	  for (i=0; i<n; i++)
+	  for (int i=0; i<n; i++)
 			x_[i] = x[i];
 
 	  return x_;

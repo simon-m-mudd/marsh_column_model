@@ -41,7 +41,7 @@
 namespace TNT
 {
     typedef TNT_SUBSCRIPT_TYPE Subscript;
-}
+} /* namespace TNT */
 
 
 // () indexing in TNT means 1-offset, i.e. x(1) and A(1,1) are the
