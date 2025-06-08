@@ -113,13 +113,16 @@ sediment_stack initiate_column(depo_particle_info dpi, double intitial_mass, dou
 	//cout << "LINE 354 particle information:"<< endl;
 	//sl.print_particle_info_to_screen();
 
-	// lets initialize the stack. To create a stack object we give it the mean sea level
+	// lets initialise the stack. To create a stack object we give it the mean sea level
 	// this mean sea level is above a datum...assumed to be the base of the sediment column
 	sediment_stack sed_stack(mean_tide);
 
 	// now add some layers to the sediment stack
+  cout <<"Adding 100 layers of " << intitial_mass << " kg each." << endl;
 	for (int i = 0; i< 100; i++)
-	sed_stack.deposit_surface_sediment(sl);
+  {
+	  sed_stack.deposit_surface_sediment(sl);
+  }
 
 	//cout << "LINE 365 printing layer 300: " << endl;
 	//sed_stack.print_ind_particles_of_layer_to_screen(300);
@@ -128,8 +131,15 @@ sediment_stack initiate_column(depo_particle_info dpi, double intitial_mass, dou
 
 	// compression
 	// now calcualte the thickness and porosity of the layers
+  cout << "I now need to compress your intitial column. " << endl;
 	sed_stack.calculate_overburden_and_thickness();
+
+  cout << "Your column is initiated!" << endl;
+
+  return sed_stack;
 }
+
+
 
 
 
@@ -435,7 +445,7 @@ vector<double> get_trapping_settling_mudd(double Tidal_Period, double Tidal_Ampl
 // this returns the peak biomass is g/m^2
 ******************************************************/
 double get_peak_biomass(double surface_elevation, double MHT,
-		   double max_depth, double min_depth, double max_bmass, double temperatureincrease, int yr, double boriginal, double bfactor)
+		   double max_depth, double min_depth, double max_bmass, double temperatureincrease, int yr, double bfactor)
 {
   double depth_range = max_depth-min_depth;
   double water_depth = MHT-surface_elevation;
@@ -637,239 +647,236 @@ vector<double> get_trap_TKE_eff_sett(double Tidal_Period, double Tidal_Amplitude
                                                          double alpha, double beta, double mu, double phi,
                                                          double nu, double g,
                            vector<double>& smass, vector<double>& tmass)
- {
-        int counter = 0;
-        double dmin = 0.002;                                // minimum depth for settling and trapping
-                                                                        // necessary becasue in sediment continuity
-                                                                        //
-          double Time_fractions = 15000;         // the number of time steps
-                                          // in the simulation over one tidal
-                                          // cycle
-          double dt = Tidal_Period/Time_fractions;
-          double start_time;
-          double water_depth;
-          double dwater_depth_dt;                        // derivative of the water depth
-          double flow_vel;
-          double TKE;                                                // turbulent kinetic energy
-          double Slope;                                        // surface water slope
+{
+    int counter = 0;
+    double dmin = 0.002;                                // minimum depth for settling and trapping
+                                                        // necessary becasue in sediment continuity
+                                                        // in metres
+    double Time_fractions = 15000;       // the number of time steps
+                                         // in the simulation over one tidal
+                                         // cycle
+    double dt = Tidal_Period/Time_fractions;
+    double start_time;
+    double water_depth;
+    double dwater_depth_dt;              // derivative of the water depth
+    double flow_vel;
+    double TKE;                          // turbulent kinetic energy
+    double Slope;                        // surface water slope
 
-          double von_karman = 0.4;                // von karman constant
-          double rho_w = 1000;                        // density of water
-          double TKE_coefficient = 0.2;        // coeffieicent relating TKE to
-                                                                          // shear stress
-          double w_up;                                        // upward velocity due to turbulence
+    double von_karman = 0.4;             // von karman constant
+    double rho_w = 1000;                 // density of water
+    double TKE_coefficient = 0.2;        // coeffieicent relating TKE to
+                                         // shear stress
+    double w_up;                         // upward velocity due to turbulence
 
-          //cout << "LINE 727, depth_below_MHT: "
-          //     << Mean_Tide + Tidal_Amplitude - marsh_surface_elevation << endl;
+    //cout << "LINE 727, depth_below_MHT: "
+    //     << Mean_Tide + Tidal_Amplitude - marsh_surface_elevation << endl;
 
-          int n_particle_types = particle_diameters.size();
-          vector<double> trapping_mass(n_particle_types,0.0);
-          vector<double> settling_mass(n_particle_types,0.0);
-          vector<double> settling_mass_no_reduc(n_particle_types,0.0);
-          vector<double> trapping_multiplier(n_particle_types);
-          vector<double> particle_conc(n_particle_types,0.0);
-          double ts_settling_mass;
-          double ts_settling_mass_no_reduc;
-          double ts_trapping_mass;
-          vector<double> ts_conc_loss_settling(n_particle_types,0.0);
-          vector<double> ts_conc_loss_trapping(n_particle_types,0.0);
-          vector<double> starting_mass(n_particle_types,0.0);
-          vector<double> mass_present(n_particle_types,0.0);
+    int n_particle_types = particle_diameters.size();
+    vector<double> trapping_mass(n_particle_types,0.0);
+    vector<double> settling_mass(n_particle_types,0.0);
+    vector<double> settling_mass_no_reduc(n_particle_types,0.0);
+    vector<double> trapping_multiplier(n_particle_types);
+    vector<double> particle_conc(n_particle_types,0.0);
+    double ts_settling_mass;
+    double ts_settling_mass_no_reduc;
+    double ts_trapping_mass;
+    vector<double> ts_conc_loss_settling(n_particle_types,0.0);
+    vector<double> ts_conc_loss_trapping(n_particle_types,0.0);
+    vector<double> starting_mass(n_particle_types,0.0);
+    vector<double> mass_present(n_particle_types,0.0);
 
-          //cout << "dt is: " << dt << endl;
+    //cout << "dt is: " << dt << endl;
 
-          for (int i = 0; i<n_particle_types; i++)
-          {
-                    trapping_multiplier[i] = 3600*alpha_T*
-                                  pow(particle_diameters[i],epsilon)*
-                                  pow(Biomass,beta_T)*dt;
-                                  // the 3600 is because the rest of the
-                                // equation is in s but dt is in hours
-            //cout << "multiplier is: " << trapping_multiplier[i] << endl;
-            particle_conc[i] = particle_concentrations_0[i];
-           }
+    for (int i = 0; i<n_particle_types; i++)
+    {
+      trapping_multiplier[i] = 3600*alpha_T*
+                            pow(particle_diameters[i],epsilon)*
+                            pow(Biomass,beta_T)*dt;
+                            // the 3600 is because the rest of the
+                          // equation is in s but dt is in hours
+      //cout << "multiplier is: " << trapping_multiplier[i] << endl;
+      particle_conc[i] = particle_concentrations_0[i];
+    }
 
-        double water_depth_amp = 2*Tidal_Amplitude*M_PI/Tidal_Period;
-          double t_ime = 0;
-          double time_submerged = 0;
-          double water_depth_old;
-          double diff_dw_dt;
-          double diff_flow_vel;
-          double mass_in;
-          double mass_out;
+    double water_depth_amp = 2*Tidal_Amplitude*M_PI/Tidal_Period;
+    double t_ime = 0;
+    double time_submerged = 0;
+    double water_depth_old;
+    double diff_dw_dt;
+    double diff_flow_vel;
+    double mass_in;
+    double mass_out;
     water_depth = 0;
 
     int ws_reduc_counter = 0;
     double ws_mean_reduc = 0;
 
-          while (t_ime < Tidal_Period)
-           {
-            t_ime += dt;
+    while (t_ime < Tidal_Period)
+    {
+      t_ime += dt;
 
-            water_depth_old = water_depth;
-            water_depth = Tidal_Amplitude*sin(2*M_PI*(t_ime/Tidal_Period - 0.25))+
-                          Mean_Tide - marsh_surface_elevation;
-        dwater_depth_dt =   2*M_PI*Tidal_Amplitude*cos(2*M_PI*(t_ime/Tidal_Period - 0.25))/Tidal_Period;
-                flow_vel = peak_flow_velocity*fabs(dwater_depth_dt/water_depth_amp);
+      water_depth_old = water_depth;
+      water_depth = Tidal_Amplitude*sin(2*M_PI*(t_ime/Tidal_Period - 0.25))+
+                    Mean_Tide - marsh_surface_elevation;
+      dwater_depth_dt =   2*M_PI*Tidal_Amplitude*cos(2*M_PI*(t_ime/Tidal_Period - 0.25))/Tidal_Period;
+      flow_vel = peak_flow_velocity*fabs(dwater_depth_dt/water_depth_amp);
 
-                TKE = get_k(aa, bb, alpha_turb, alpha_zero,
-                                 alpha, beta, mu, phi, nu, g, Biomass, flow_vel);
-                //Slope = get_slope(aa, bb, alpha_turb, alpha_zero,
-                //                 alpha, beta, mu, phi, nu, g, Biomass, flow_vel);
-
-
-
-                w_up = von_karman*sqrt(TKE_coefficient*TKE/rho_w);
-                //cout << "TKE is: " << TKE << " and w_up is: " << w_up << endl;
-
-                //ws_mean_reduc += (particle_settling_velocities[0]-w_up)/
-                                                        particle_settling_velocities[0];
-                //ws_reduc_counter++;
-
-                //cout << "LINE 352, flow velocity is: " << flow_vel << endl;
-
-                // reset the concentration loss vectors
-                for (int i = 0; i<n_particle_types; i++)
-             {
-                        ts_conc_loss_settling[i] = 0;
-                        ts_conc_loss_trapping[i] = 0;
-                }
-
-                if (water_depth >dmin)
-              {
-                        // if the tide is coming in, water has a starting concntration of C_0
-                        if (dwater_depth_dt >0)
-                        {
-                                for (int i = 0; i<n_particle_types; i++)
-                             {
-                                        time_submerged+=dt;
-                                        starting_mass[i] = particle_concentrations_0[i]*water_depth;
-
-                                        //cout << "LINE 463, part conc["<<i<<"]: " << particle_conc[i]
-                                        //     << " and wd is: " << water_depth<< endl;
-                                        ts_settling_mass = 3600*particle_concentrations_0[i]*dt*
-                                                                 (particle_settling_velocities[i]-w_up);
-                                        if (ts_settling_mass < 0)
-                                        {
-                                                ts_settling_mass = 0;
-                                        }
-                                        ts_settling_mass_no_reduc = 3600*particle_concentrations_0[i]*dt*
-                                                                 (particle_settling_velocities[i]);
-                                                                 // the 3600 is becuase the settling velocity is in m/s
-                                                                  // and dt is in hours
-                    ts_trapping_mass = trapping_multiplier[i]*particle_concentrations_0[i]
-                                                            *pow(flow_vel,gamma_tr+1)
-                                                                                  *water_depth;
-
-                    if (starting_mass[i] < ts_trapping_mass)
-                    {
-                                                ts_trapping_mass = starting_mass[i];
-                                                ts_settling_mass = 0;
-                                        }
-                                        else if ( starting_mass[i] -ts_trapping_mass < ts_settling_mass)
-                                        {
-                                                ts_settling_mass = starting_mass[i] -ts_trapping_mass;
-                                        }
-
-                                        settling_mass_no_reduc[i] += ts_settling_mass_no_reduc;
-                                        trapping_mass[i] += ts_trapping_mass;
-                    settling_mass[i] += ts_settling_mass;
-
-
-                                        //cout << "LINE 485, ts_sett_mass["<<i<<"]: " << ts_settling_mass << endl;
-                                        //cout << "LINE 486, ts_trap_mass["<<i<<"]: " << ts_trapping_mass << endl;
-                    //cout << "LINE 487 ts: " <<t_ime << " part_conc["<<i<<"]: " << particle_conc[i] <<endl;
-                                }
-                        }
-                        // if the tide is going out, the concentration can get depleted
+      TKE = get_k(aa, bb, alpha_turb, alpha_zero,
+                        alpha, beta, mu, phi, nu, g, Biomass, flow_vel);
+      //Slope = get_slope(aa, bb, alpha_turb, alpha_zero,
+      //                 alpha, beta, mu, phi, nu, g, Biomass, flow_vel);
 
 
 
-                        else
-                        {
-                                for (int i = 0; i<n_particle_types; i++)
-                             {
-                                        starting_mass[i] = particle_conc[i]*water_depth;
+      w_up = von_karman*sqrt(TKE_coefficient*TKE/rho_w);
+      //cout << "TKE is: " << TKE << " and w_up is: " << w_up << endl;
 
-                                        //if (counter == 0)
-                                        //{
-                                        //        cout << "LINE 497, part conc["<<i<<"]: " << particle_conc[i]
-                                        //             << " and wd is: " <<water_depth
-                                        //             << " and starting mass: " << starting_mass[i]  <<  endl;
-                                        //}
-                                        ts_settling_mass = 3600*particle_conc[i]*dt*
-                                                                 (particle_settling_velocities[i]-w_up);
-                                                                 // the 3600 is becuase the settling velocity is in m/s
-                                                                  // and dt is in hours
-                    if (ts_settling_mass < 0)
-                                        {
-                                                ts_settling_mass = 0;
-                                        }
-                    ts_trapping_mass = trapping_multiplier[i]*particle_conc[i]
-                                                            *pow(flow_vel,gamma_tr+1)
-                                                                                  *water_depth;
+      //ws_mean_reduc += (particle_settling_velocities[0]-w_up)/
+                                              particle_settling_velocities[0];
+      //ws_reduc_counter++;
 
-                    if (starting_mass[i] < ts_trapping_mass)
-                    {
-                                                ts_trapping_mass = starting_mass[i];
-                                                ts_settling_mass = 0;
-                                        }
-                                        else if ( starting_mass[i] -ts_trapping_mass < ts_settling_mass)
-                                        {
-                                                ts_settling_mass = starting_mass[i] -ts_trapping_mass;
-                                        }
+      //cout << "LINE 352, flow velocity is: " << flow_vel << endl;
 
-                                        trapping_mass[i] += ts_trapping_mass;
-                    settling_mass[i] += ts_settling_mass;
+      // reset the concentration loss vectors
+      for (int i = 0; i<n_particle_types; i++)
+      {
+          ts_conc_loss_settling[i] = 0;
+          ts_conc_loss_trapping[i] = 0;
+      }
 
-
-                                        //cout << "LINE 519, ts_sett_mass["<<i<<"]: " << ts_settling_mass << endl;
-                                        //cout << "LINE 520, ts_trap_mass["<<i<<"]: " << ts_trapping_mass << endl;
-
-                    particle_conc[i] = particle_conc[i]
-                                    -dt*particle_conc[i]*dwater_depth_dt/water_depth
-                                    -(ts_settling_mass+ts_trapping_mass)/water_depth;
-                    if (particle_conc[i] < 0)
-                     particle_conc[i] = 0;
-
-                    //if (particle_conc[i] > 0)
-                    //        cout << "LINE 528 ts: " <<t_ime << " part_conc["<<i<<"]: " << particle_conc[i] <<endl;
-
-                           if (counter == 0)
-                            counter ++;
-
-                                }
-                        }
-
-
-                }
-                //cout << "time is: " << t_ime << " and water depth is: " << water_depth << endl;
-
-
-
-
-        }
-
-        //cout << "time submerged is: " << time_submerged << endl;
-        //cout << "w_mean_reduc = " << ws_mean_reduc/double(ws_reduc_counter) << endl;
-        //cout << "settling: " << settling_mass[0] << " settling no reduc: " << settling_mass_no_reduc[0] << endl;
-
-          //cout << "conc: " << particle_concentrations_0[0] << " w_s: " << particle_settling_velocities[0] << endl;
-          //cout << "settling_mass: " << settling_mass[0] << " and trapping mass: " << trapping_mass[0] << endl;
-          vector<double> total_mass(n_particle_types);
-          //cout << "time submerged: " << time_submerged << " settling_mass: " << settling_mass[0] << endl;
+      if (water_depth >dmin)
+      {
+        // if the tide is coming in, water has a starting concntration of C_0
+        if (dwater_depth_dt >0)
+        {
           for (int i = 0; i<n_particle_types; i++)
           {
-            total_mass[i] = trapping_mass[i]+settling_mass[i];
-            //cout << "LINE 682 main: mass["<<i<<"]: " << total_mass[i] << " settling: "
-            //     << settling_mass[i] << " trapping: " << trapping_mass[i] << endl;
-           }
+            time_submerged+=dt;
+            starting_mass[i] = particle_concentrations_0[i]*water_depth;
 
-          tmass = trapping_mass;
-          smass = settling_mass;
-          //cout << "smass: " << smass[0] << " and tmass: " << tmass[0] << endl;
-          return total_mass;
+            //cout << "LINE 463, part conc["<<i<<"]: " << particle_conc[i]
+            //     << " and wd is: " << water_depth<< endl;
+            ts_settling_mass = 3600*particle_concentrations_0[i]*dt*
+                                      (particle_settling_velocities[i]-w_up);
+            if (ts_settling_mass < 0)
+            {
+              ts_settling_mass = 0;
+            }
+            ts_settling_mass_no_reduc = 3600*particle_concentrations_0[i]*dt*
+                                      (particle_settling_velocities[i]);
+                                      // the 3600 is becuase the settling velocity is in m/s
+                                      // and dt is in hours
+            ts_trapping_mass = trapping_multiplier[i]*particle_concentrations_0[i]
+                                                      *pow(flow_vel,gamma_tr+1)
+                                                                            *water_depth;
 
+            if (starting_mass[i] < ts_trapping_mass)
+            {
+              ts_trapping_mass = starting_mass[i];
+              ts_settling_mass = 0;
+            }
+            else if ( starting_mass[i] -ts_trapping_mass < ts_settling_mass)
+            {
+              ts_settling_mass = starting_mass[i] -ts_trapping_mass;
+            }
+
+            settling_mass_no_reduc[i] += ts_settling_mass_no_reduc;
+            trapping_mass[i] += ts_trapping_mass;
+            settling_mass[i] += ts_settling_mass;
+
+
+            //cout << "LINE 485, ts_sett_mass["<<i<<"]: " << ts_settling_mass << endl;
+            //cout << "LINE 486, ts_trap_mass["<<i<<"]: " << ts_trapping_mass << endl;
+            //cout << "LINE 487 ts: " <<t_ime << " part_conc["<<i<<"]: " << particle_conc[i] <<endl;
+          }
+        }
+                  // if the tide is going out, the concentration can get depleted
+
+
+
+        else
+        {
+          for (int i = 0; i<n_particle_types; i++)
+          {
+            starting_mass[i] = particle_conc[i]*water_depth;
+
+            //if (counter == 0)
+            //{
+            //        cout << "LINE 497, part conc["<<i<<"]: " << particle_conc[i]
+            //             << " and wd is: " <<water_depth
+            //             << " and starting mass: " << starting_mass[i]  <<  endl;
+            //}
+            ts_settling_mass = 3600*particle_conc[i]*dt*
+                                      (particle_settling_velocities[i]-w_up);
+                                      // the 3600 is becuase the settling velocity is in m/s
+                                      // and dt is in hours
+            if (ts_settling_mass < 0)
+            {
+              ts_settling_mass = 0;
+            }
+            ts_trapping_mass = trapping_multiplier[i]*particle_conc[i]
+                                                      *pow(flow_vel,gamma_tr+1)
+                                                                            *water_depth;
+
+            if (starting_mass[i] < ts_trapping_mass)
+            {
+              ts_trapping_mass = starting_mass[i];
+              ts_settling_mass = 0;
+            }
+            else if ( starting_mass[i] -ts_trapping_mass < ts_settling_mass)
+            {
+              ts_settling_mass = starting_mass[i] -ts_trapping_mass;
+            }
+
+            trapping_mass[i] += ts_trapping_mass;
+            settling_mass[i] += ts_settling_mass;
+
+
+                                  //cout << "LINE 519, ts_sett_mass["<<i<<"]: " << ts_settling_mass << endl;
+                                  //cout << "LINE 520, ts_trap_mass["<<i<<"]: " << ts_trapping_mass << endl;
+
+            particle_conc[i] = particle_conc[i]
+                              -dt*particle_conc[i]*dwater_depth_dt/water_depth
+                              -(ts_settling_mass+ts_trapping_mass)/water_depth;
+            if (particle_conc[i] < 0)
+            {
+              particle_conc[i] = 0;
+            }
+
+            //if (particle_conc[i] > 0)
+            //        cout << "LINE 528 ts: " <<t_ime << " part_conc["<<i<<"]: " << particle_conc[i] <<endl;
+
+            if (counter == 0)
+            {
+              counter ++;
+            }
+
+          }
+        }
+      }
+          //cout << "time is: " << t_ime << " and water depth is: " << water_depth << endl;
+    }
+
+    //cout << "time submerged is: " << time_submerged << endl;
+    //cout << "w_mean_reduc = " << ws_mean_reduc/double(ws_reduc_counter) << endl;
+    //cout << "settling: " << settling_mass[0] << " settling no reduc: " << settling_mass_no_reduc[0] << endl;
+
+    //cout << "conc: " << particle_concentrations_0[0] << " w_s: " << particle_settling_velocities[0] << endl;
+    //cout << "settling_mass: " << settling_mass[0] << " and trapping mass: " << trapping_mass[0] << endl;
+    vector<double> total_mass(n_particle_types);
+    //cout << "time submerged: " << time_submerged << " settling_mass: " << settling_mass[0] << endl;
+    for (int i = 0; i<n_particle_types; i++)
+    {
+      total_mass[i] = trapping_mass[i]+settling_mass[i];
+      //cout << "LINE 682 main: mass["<<i<<"]: " << total_mass[i] << " settling: "
+      //     << settling_mass[i] << " trapping: " << trapping_mass[i] << endl;
+      }
+
+    tmass = trapping_mass;
+    smass = settling_mass;
+    //cout << "smass: " << smass[0] << " and tmass: " << tmass[0] << endl;
+    return total_mass;
 
 }
 //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -878,26 +885,26 @@ vector<double> get_trap_TKE_eff_sett(double Tidal_Period, double Tidal_Amplitude
 // this function calculates the settling velocity
 double calculate_w_s(double d_p)
 {
-        double w_s;
-        double A = 38.0;
-        double F = 3.55;
-        double m = 1.12;
-        double g = 9.80;
-        double rho_s = 2600;
-        double rho_w = 1000;
-        double s = rho_s/rho_w;
-        double nu = pow(10,-6);
-        double term1,term2,term3,term4,term5,term6;
+  double w_s;
+  double A = 38.0;
+  double F = 3.55;
+  double m = 1.12;
+  double g = 9.80;
+  double rho_s = 2600;
+  double rho_w = 1000;
+  double s = rho_s/rho_w;
+  double nu = pow(10,-6);
+  double term1,term2,term3,term4,term5,term6;
 
-        term1 = 0.25*pow(A/F,2.0/m);
-        term2 = 4*d_p*d_p*d_p*g*(s-1)/(3*F*nu*nu);
-        term3 = pow(term2,1/m);
-        term4 = sqrt(term1+term3);
-        term5 = 0.5*pow(A/F,1/m);
-        term6 = pow((term4-term5),m);
-        w_s = nu*term6/d_p;
+  term1 = 0.25*pow(A/F,2.0/m);
+  term2 = 4*d_p*d_p*d_p*g*(s-1)/(3*F*nu*nu);
+  term3 = pow(term2,1/m);
+  term4 = sqrt(term1+term3);
+  term5 = 0.5*pow(A/F,1/m);
+  term6 = pow((term4-term5),m);
+  w_s = nu*term6/d_p;
 
-        return w_s;
+  return w_s;
 }
 
 

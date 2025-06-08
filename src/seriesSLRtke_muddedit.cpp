@@ -652,7 +652,7 @@ double column_model(double RSLR, double kfactor, double bfactor, double tA, doub
 		particle_masses = sed_stack.get_total_stack_mass_of_each_type(np_types);
 		particle_masses_day0 = sed_stack.get_total_stack_mass_of_each_type(np_types);
 		//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-		// now go day by day, calucalating the biomass, root growth and death
+		// now go day by day, calculating the biomass, root growth and death
 		// and sedimentaion
 		//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 		day = 0;

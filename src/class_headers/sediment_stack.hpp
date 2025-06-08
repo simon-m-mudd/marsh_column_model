@@ -31,26 +31,26 @@ class sediment_stack
  										int bottom_layer, int top_layer);
  	double get_layer_thickness(int layer);
  	double get_layer_top_elevation(int layer);
-    int get_n_layers();
-    void calculate_overburden_and_thickness();
+   int get_n_layers();
+   void calculate_overburden_and_thickness();
 
 
 
-    void print_layer_thickness_to_screen(double t_ime);
-    void print_layer_mass_to_screen(double t_ime);
-    void print_layer_porosity_to_screen(double t_ime);
-    void print_layer_top_elevations_to_screen(double t_ime);
-    void print_particle_masses_to_screen(double t_ime);
-    void print_ind_particles_of_layer_to_screen(int layer_number);
+   void print_layer_thickness_to_screen(double t_ime);
+   void print_layer_mass_to_screen(double t_ime);
+   void print_layer_porosity_to_screen(double t_ime);
+   void print_layer_top_elevations_to_screen(double t_ime);
+   void print_particle_masses_to_screen(double t_ime);
+   void print_ind_particles_of_layer_to_screen(int layer_number);
 
-    void print_layer_thickness(double t_ime, ofstream& fout);
-    void print_layer_mass(double t_ime, ofstream& fout);
-    void print_layer_porosity(double t_ime, ofstream& fout);
-    void print_layer_top_elevations(double t_ime, ofstream& fout);
-    void print_layer_particle_proportions(double t_ime, ofstream& fout);
-    void print_layer_particle_masses(double t_ime, ofstream& fout);
-    void print_single_layer_particle_masses(double t_ime, ofstream& fout, int layer_number);
-    void print_band_layer_particle_masses(double t_ime, ofstream& fout,
+   void print_layer_thickness(double t_ime, ofstream& fout);
+   void print_layer_mass(double t_ime, ofstream& fout);
+   void print_layer_porosity(double t_ime, ofstream& fout);
+   void print_layer_top_elevations(double t_ime, ofstream& fout);
+   void print_layer_particle_proportions(double t_ime, ofstream& fout);
+   void print_layer_particle_masses(double t_ime, ofstream& fout);
+   void print_single_layer_particle_masses(double t_ime, ofstream& fout, int layer_number);
+   void print_band_layer_particle_masses(double t_ime, ofstream& fout,
  										int bottom_layer, int top_layer);
  	void print_stack_stats(double t_ime, ofstream& fout);
 

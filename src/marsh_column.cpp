@@ -136,7 +136,8 @@ int main (int nNumberofArgs,char *argv[])
     help_map["tidal_amplitude"] = {  "float","0.01","Total suspended sediment concentration in kg/m^3.","Default set for 1m tidal range."}; 
 
 
-
+    float_default_map["initial_layer_mass"] = 25;
+    help_map["initial_layer_mass"] = {  "float","25","The intial mass of the sediment layers..","In kg (column is always assumed 1 m^2) assumed to be 0 index sediment type from d_particle_info."}; 
 
 
     float_default_map["silt_fraction"] = 0.8;
@@ -160,7 +161,8 @@ int main (int nNumberofArgs,char *argv[])
     float_default_map["theta_root_efolding"] = 0.2;
     help_map["theta_root_efolding"] = {  "float","0.2","The efolding depth of root production as a fration of the tidal amplitude.","Default set for 1m tidal range."}; 
 
-
+    int_default_map["end_year"] = 2;
+    help_map["end_year"] = {  "int","2","The end year of the simulation.","Default is for a short simulation"};     
 
 
 
@@ -213,9 +215,10 @@ int main (int nNumberofArgs,char *argv[])
 
     // read the depo_particle file
     cout << "Let me read the depo partile info file" << endl;
+    cout << "This is: " << this_string_map["depo_particle_info_file"] << endl;
     depo_particle_info dpi(  this_string_map["depo_particle_info_file"].c_str());
 	int np_types = dpi.get_n_types();			// number of particle types
-
+    cout << "np_types is: " << np_types << endl;
 
 
 
@@ -238,13 +241,56 @@ int main (int nNumberofArgs,char *argv[])
 
 
 
+    //==================================================================================================
+    // parameters for TKE module see Mudd et al 2010
+    double alpha = 0.55;
+    double beta = 0.40;
+    double mu = 0.00066;
+    double phi = 0.29;
+    double kappa = 0.224;
+    double nu = 10e-6;                // kinematic viscosity of water a 20C
+    double gamma_tr = 0.718;        // exponent from Nepf (1999)
+    double epsilon = 2.08;        // exponent from Nepf (1999)
+    double max_flow_velocity;                // flow velocity at column
+    double g = 9.80;
+    double reference_flow_velocity = 0.05; //default=0.05m/s.
+    double limiting_flow_velocity = 0.1;
+    double reference_biomass = 200;
+    //MK- For comparsion Christiansen measured velocity 0.0003-.003 m/s 45 m from channel. EOSL biomass at UPC is 500-1000 g/m2.
+    double alpha_T = alpha*kappa*pow(mu,gamma_tr-epsilon)/pow(nu,gamma_tr);
+    double beta_T = phi*(gamma_tr-epsilon)+beta;
+    double aa = 0.46;                // coeficient in equation of alhpa_1
+                                                    // as fxn of solid fraction; Tanino and Nepf
+                                                    // eq. 13
+    double bb = 3.8;                // coeficient in equation of alhpa_1
+                                                    // as fxn of solid fraction; Tanino and Nepf
+                                                    // eq. 13
+    double alpha_turb = 0.9;// turbulence coefficient Nepf (1999)
+    double alpha_zero = 11;        // from tanino and nepf (2008)
+
+    double reference_slope;
+    reference_slope = get_slope(aa, bb, alpha_turb, alpha_zero,
+                                alpha, beta, mu, phi, nu, g, reference_biomass, reference_flow_velocity);
+    //
+    //==================================================================================================
+
+    // these are vectors for settling and trapping mass
+	vector<double> tmass;
+    vector<double> smass;
+
+	double start_depth_frac;
+
+	int i_start_frac=1;	//MK- I changed this from 8 to 4. Want the marsh to start low in the tide frame and build up.
+	start_depth_frac = double(i_start_frac)*0.1;
+
+
+
     cout << "Let me read the parameter file" << endl;
     double thickness_iteration_threshold = 1e-6;
                             // a convergence threshold for
                             // used in compression calculations
                             // see sediment_stack::calculate_overburden_and_thickness()
 
-    cout << "np_types is: " << np_types << endl;
 
     // parameters for the sedimentation component
     double Tidal_Period;			// tidal period in hours
@@ -254,11 +300,6 @@ int main (int nNumberofArgs,char *argv[])
     double marsh_surface_elevation_day0;
                                     // used for differencing
     double Mean_Tide;			// the mean tide above datum to start
-    double flow_velocity = 0.01;		// flow velocity at column
-    double alpha_T = 1.0e6;		// parameter for trapping
-    double beta_T = 0.04;			// parameter for trapping
-    double epsilon = 2.08;		// parameter for trapping
-    double gamma = 0.718;			// parameter for trapping
     double t_ime;
     double tidal_periods_per_day;
     int number_of_particle_types;
@@ -284,7 +325,7 @@ int main (int nNumberofArgs,char *argv[])
                                 // the peak biomass in 1/days
     double min_growth;		// minimum growth rate
     double nu_Gmin;			// the ratio between the minimum growth rate and
-                                // teh peak biomass in 1/days
+                                // the peak biomass in 1/days
     double phase_shift;		// the delay between the peak grwoth season and the peak biomass
                                 // in days
     double theta_bm;			// slope of relationship between B_ag/B_bg and
@@ -406,9 +447,33 @@ int main (int nNumberofArgs,char *argv[])
 	gamma_bg_biomass = Tidal_Amplitude*theta_root_efold;
 
 
+    cout << "I've read the parameter file. here are some parameters:" << endl;
+    cout << "nu_gp: " << nu_Gp << ", mean tide: " << Mean_Tide << ", root type: " << root_type << endl;
+
+	// calcualte the particle settling velocities explicitly
+	effective_svel = calculate_w_s(particle_diameters[0]);
+
+    // some parametrs for time series
+	double SS_acc_ratio_trigger = 0.0001;
+	double cycles_per_month  = 1.0;
+	double months_per_year = 12.0;
+	int timesteps_per_year = int(double(months_per_year*cycles_per_month+0.5));
+	double dt = 365.0/(cycles_per_month*months_per_year);			// time spacing
+	double yr_time;
+
+
+
+
     if(this_bool_map["test_column_initiation"])
     {
-        cout << "You asked me to test initiation the column with sand" << endl;
+        cout << "You asked me to test initiation the column" << endl;
+        sediment_stack sed_stack = initiate_column(dpi,double(this_float_map["initial_layer_mass"]), Mean_Tide);
+
+
+        cout << "The number of layers is: " << sed_stack.get_n_layers() << endl;
+        double t_ime = 0;
+        sed_stack.print_layer_top_elevations_to_screen(t_ime);
+
     }
 
     if(this_bool_map["test_TKE_settling"])
@@ -417,5 +482,422 @@ int main (int nNumberofArgs,char *argv[])
     }
 
     cout << "I've done everything you asked and am now going back to sleep. Good night." <<endl;
+
+
+    if(this_bool_map["run_column_timeseries"])
+    {
+        string fname = OUT_DIR+OUT_ID+"_data.csv";
+        ofstream data_out;
+        data_out.open(fname.c_str());
+
+        data_out << "SLRR,Tidal_amplitude,start_depth_frac,yr,conc_silt,effective_svel,";
+		data_out <<	"MHT,MHT-marsh_surface_elevation,max_depth,marsh_surface_elevation-marsh_surface_elevation_day0,peak_Bmass" << endl;       
+
+        string col_out_fname_prefix = "column_out_";
+        string col_out_fname;
+
+
+
+
+        // vectors for holding timeseries information
+        vector<double> TimeSeries_MHT;	
+        vector<double> TimeSeries_Biomass;
+        vector<double> TimeSeries_Elevation;
+        vector<double> TimeSeries_Accretion;
+        vector<double> TimeSeries_Yr;
+        vector<double> TimeSeries_Ref;
+        vector<double> TimeSeries_Lab;
+        vector<double> TimeSeries_Silt;
+
+
+
+        // initiate the stack
+        sediment_stack sed_stack = initiate_column(dpi,double(this_float_map["initial_layer_mass"]), Mean_Tide);
+
+
+        cout << "The number of layers is: " << sed_stack.get_n_layers() << endl;
+        double t_ime = 0;
+        sed_stack.print_layer_top_elevations_to_screen(t_ime);
+
+
+        // set up elevations
+        marsh_surface_elevation_old =sed_stack.get_marsh_surface_elevation();
+        marsh_surface_elevation = marsh_surface_elevation_old;
+
+        // two variables used for printing the stats_out file
+        vector<double> particle_masses = sed_stack.get_total_stack_mass_of_each_type(np_types);
+        vector<double> particle_masses_old = particle_masses;
+        vector<double> start_masses = particle_masses;
+        vector<double> particle_masses_day0 = particle_masses;
+
+        cout  << "marsh surf elev: " << marsh_surface_elevation << endl;
+
+        // calucalte the max depth based on the McKee and Patrick data
+        max_depth = -(0.0406-0.6663*tA*2);
+
+        // place mean high tide at intermdiate depth in biomass curve
+        double intermediate_depth = (max_depth-min_depth)*start_depth_frac+min_depth;
+        double starting_depth = .06; // MK- I added this line, and the next. Usually doing .06 
+        MHT = marsh_surface_elevation + starting_depth;
+        //MHT = marsh_surface_elevation + intermediate_depth; //MK- I commented this one out
+        Mean_Tide = MHT-Tidal_Amplitude;
+
+
+        cout << "MHT: " << MHT << "S tarting elevation: " << marsh_surface_elevation << endl;
+
+
+
+        double SS_acc_ratio_trigger = 0.0001;
+        double cycles_per_month  = 1.0;
+        double months_per_year = 12.0;
+        int timesteps_per_year = int(double(months_per_year*cycles_per_month+0.5));
+        double dt = 365.0/(cycles_per_month*months_per_year);			// time spacing
+        double yr_time;
+
+
+	    vector<int> annual_band_layer_top;		// gives the location of the top
+											    // layer of an annual band
+        t_ime = 0;						// initilaize the time
+
+
+        // first, get the top layer of the initial pile of sediment
+        annual_band_layer_top.push_back(sed_stack.get_n_layers()-1);
+        cout << "LINE 359 starting n_layers: " << sed_stack.get_n_layers() << endl;
+
+        // start a loop
+        accretion_ratio = 10;                       // SSM need to figure out what this does
+        int dead_biomass_counter = 0;
+        int low_acc_ratio_counter = 0;
+        int yr = 0;
+        while (yr < this_int_map["end_year"])
+        {
+            yr++;
+            t_ime = yr*365;
+            yr_time = t_ime/365;
+
+            SLR= RSLR; 
+            
+
+            // reset the biomass
+            Bmass = 0;
+
+            // recalcualte the growth index. see notes in sediment_stack.cpp
+            vector<double> growth_index = sed_stack.create_growth_index_inf(gamma_bg_biomass);
+
+
+            marsh_surface_elevation = sed_stack.get_marsh_surface_elevation();
+            marsh_surface_elevation_day0 = marsh_surface_elevation;
+            cout << "I am starting year " << yr << " and the main marsh_surface elevation is: " << marsh_surface_elevation << endl;
+
+            // calcualte t./column.out
+            //the peak biomass for the year
+            double temperatureincrease = 0;
+            double bfactor = 0;
+            peak_Bmass =  get_peak_biomass(marsh_surface_elevation, MHT,
+            max_depth, min_depth, max_bmass,temperatureincrease,yr,bfactor);	//MK- I added temperature,yr,boriginal to this line
+
+
+            min_bmass = peak_Bmass*theta_bmin;
+            max_growth = nu_Gp*peak_Bmass;
+            min_growth = nu_Gmin*peak_Bmass;
+            particle_masses = sed_stack.get_total_stack_mass_of_each_type(np_types);
+            particle_masses_day0 = sed_stack.get_total_stack_mass_of_each_type(np_types);
+            //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+            // now go day by day, calculating the biomass, root growth and death
+            // and sedimentaion
+            //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+            day = 0;
+            int count = 0;
+            for (int yo = 1; yo <= timesteps_per_year; yo++)
+            //for (int yo = 1; yo <= 2; yo++)
+            {
+                marsh_surface_elevation_old = marsh_surface_elevation;
+                particle_masses_old = particle_masses;
+
+                day +=dt;
+                count++;
+                t_ime = t_ime + dt;
+                yr_time = t_ime/365;
+                //cout << "LINE 363 main day is: " << day << endl;
+
+                // get the rate of growth and decay
+                // this returns a vector that is the change in the aboveground and
+                // beolowground biomass during the time period dt
+                //
+                //cout << "LINE 418 starting growth and mortality function\n";
+
+                //bm_and_mort =  biomass_and_mortality(day, peak_Bmass, min_bmass,
+                //          day_peak_season, max_growth, min_growth, dt);
+                bm_and_mort =  biomass_and_mortality2(day, peak_Bmass, min_bmass,
+                        day_peak_season, max_growth, min_growth, dt, phase_shift);
+                Bmass_old = Bmass;
+                Bmass = bm_and_mort[0];
+                Delta_Bmass = Bmass - Bmass_old;
+
+                // calculate ratio between BG_and aboverground biomass
+
+                // in this model, the tidal amplitude can cahnge and with it the range of
+                // plant growth changes. For large amplitudes, large depths below MHT can
+                // occur, so we need to adjust the empirically determined
+                // BG_to_AG ratio
+                // option 1: limit the ratio to a minimum value
+                BG_to_AG_ratio = theta_bm*(MHT-marsh_surface_elevation)+D_mbm;
+                if (BG_to_AG_ratio <0.1)
+                {
+                    BG_to_AG_ratio = 0.1;
+                }
+
+
+                //cout << "LINE 444 depth: " << MHT-marsh_surface_elevation << " and B_mass is: " << Bmass << endl;
+                //cout << " ratio is: " << BG_to_AG_ratio << endl;
+
+                // now get the belowground biomass and its change
+                // NOTE we divide by 1000 becuase sedimentation is in kg whereas biomass
+                // parameters are in g
+                BG_Bmass = Bmass*BG_to_AG_ratio/1000;
+                Delta_BG_Bmass = Delta_Bmass*BG_to_AG_ratio/1000;
+                BG_mort = bm_and_mort[1]*BG_to_AG_ratio/1000;
+
+
+                //*****Added these 2 lines to make Simon tke code more stable ////
+                if (Bmass == 0)
+                {Bmass = 1;}
+                /////////////////////////////
+
+
+                //************ Simon- new function call
+                // calculate the maximum flow velocity using a reference water surface slope
+                            // that is defined by a reference velocity set at a reverence biomass (see line 289)
+                max_flow_velocity =  get_u(aa, bb, alpha_turb, alpha_zero,
+                                    alpha, beta, mu, phi,
+                                    nu, g, Bmass, reference_slope);
+
+                if (max_flow_velocity > limiting_flow_velocity)
+                {
+                    max_flow_velocity =limiting_flow_velocity ;
+                }
+                //**************
+
+
+
+
+                //cout << "LINE 471 main: BG_Bmass: " << BG_Bmass << " BG_mort: " << BG_mort <<endl;
+
+                //cout << "LINE 459 masses before " << endl;
+                //sed_stack.print_particle_masses_to_screen(t_ime);
+
+
+                sed_stack.root_growth_and_death(growth_index, root_type,
+                                carbon_types, chi_carbon_types, BG_Bmass, BG_mort);
+
+                //cout << "LINE 466 masses after root growth death " << endl;
+                //sed_stack.print_particle_masses_to_screen(t_ime);
+
+                // compress the stack
+                //cout << "LINE 453 starting compression" << endl;
+                sed_stack.calculate_overburden_and_thickness();
+                //cout << "LINE 455 compressed" << endl;
+
+                // now start building the sedimentation vector
+                // the sedimentation routine used here takes a depo_particle_info object
+                // and a vector. The vector is the same size as the number of particles
+                vector<double> depo_masses(np_types, 0.0);	// the vector that stores
+                                                            // the deposition masses
+
+                // now get the masses due to trapping and settling. This uses particle
+                // concentrations within the flow column, as well as settling velocities
+                //cout <<"LINE 465 trapping" << endl;
+                //cout <<"Mean_Tide: " << Mean_Tide << " surf elev: " << marsh_surface_elevation << endl;
+
+                //Simon- this new line replaced the original
+
+
+                mass_trap = get_trap_TKE_eff_sett(Tidal_Period, Tidal_Amplitude,
+                                        Mean_Tide, marsh_surface_elevation, particle_concentrations_0,
+                                        particle_diameters, particle_settling_velocities, max_flow_velocity,
+                                        Bmass, alpha_T, beta_T, epsilon, gamma_tr, aa, bb, alpha_turb,
+                                        alpha_zero, alpha, beta, mu, phi, nu, g, smass,tmass);
+                // add the trapped mass into the depo_masses vector
+                for (int i = 0; i<np_types; i++)
+                {
+                    depo_masses[i] += dt*mass_trap[i]*tidal_periods_per_day;
+                }
+                //cout << "LINE 476 trapped" << endl;
+
+                // now add the organogenic deposition from the surface
+                for (int i = 0; i< n_carbon_types; i++)
+                {
+                    // the equation below is divided by 1000 because mortality is calculated in
+                    // g/m^2 and deposition is in kg
+                    depo_masses[ carbon_types[i] ] += chi_carbon_types[i]*bm_and_mort[1]/1000;
+                }
+
+                // now deposit the radiogenic species.
+                depo_masses[ Pb_type ] += dt*CRS_Pb_supply/365.0;
+
+                // now deposit the sediment
+                sed_stack.deposit_surface_sediment(dpi,depo_masses);
+                // and compress it
+                sed_stack.calculate_overburden_and_thickness();
+
+
+                //cout << "LINE 517 masses after surface depo " << endl;
+                //sed_stack.print_particle_masses_to_screen(t_ime);
+
+                // print to screen the masses of the individual particle types in the layers
+                //cout << "LINE 490 main printing particle masses before decay " << endl;
+                //sed_stack.print_particle_masses_to_screen(t_ime);
+                //cout << endl;
+
+                // now do some decay
+                double kfactor = 1;            // no temp dependent decay here
+                sed_stack.decay_and_mass_loss(dt,temperatureincrease,kfactor);	//MK- I added temperatureincrease and kfactor
+
+                //cout << "LINE 528 masses after decay " << endl;
+                //sed_stack.print_particle_masses_to_screen(t_ime);
+
+
+                // print to screen the masses of the individual particle types in the layers
+                //cout << "LINE 445 main printing particle masses after decay " << endl;
+                //sed_stack.print_particle_masses_to_screen(t_ime);
+                //cout << endl;
+
+                // compress again
+                sed_stack.calculate_overburden_and_thickness();
+
+                // increase sea level
+                //cout << "MHT: " << MHT << " dt/365: " << dt/365.0 << endl;
+                MHT += dt*SLR/365.0;
+                Mean_Tide+= dt*SLR/365.0;
+
+                // get data for stats file
+                particle_masses = sed_stack.get_total_stack_mass_of_each_type(np_types);
+                marsh_surface_elevation = sed_stack.get_marsh_surface_elevation();
+                //cout << endl << endl << "LINE 533, surf elev: " << marsh_surface_elevation << endl << endl;
+
+            }	// !! end sub annual loop
+
+            //cout << "main, LINE 538, printing stack masses" << endl;
+
+            // now get the top layer of the annual band
+            annual_band_layer_top.push_back(sed_stack.get_n_layers()-1);
+            //cout << "n_layers: " << sed_stack.get_n_layers() << endl;
+
+            accretion_rate = marsh_surface_elevation- marsh_surface_elevation_day0;
+            accretion_ratio = accretion_rate/SLR;
+            if (yr%1 == 0)
+            {
+                cout << "year is: " << yr;
+                cout << " accretion rate = " << accretion_rate << " MHT= "<< MHT
+                << " depth bel MHT: " << MHT-marsh_surface_elevation << " biomass= " << peak_Bmass << " SLRR= " << SLR*1000
+                << endl;
+            }
+
+            int ab_pointer_sz = annual_band_layer_top.size();
+
+            if (peak_Bmass == 0)
+            {
+                dead_biomass_counter++;
+            }
+            if ( (1-accretion_ratio)*(1-accretion_ratio) < SS_acc_ratio_trigger)
+            {
+                low_acc_ratio_counter++;
+            }
+
+            //MK- add some lines storing MHT, Biomass,elevation, and accretion rate to a vector
+            //temperaturevector.push_back(temperature);
+            TimeSeries_Yr.push_back(yr);
+            TimeSeries_MHT.push_back(MHT);
+            TimeSeries_Biomass.push_back(peak_Bmass);
+            TimeSeries_Elevation.push_back(marsh_surface_elevation);
+            TimeSeries_Accretion.push_back(accretion_rate);
+
+
+            // SMM: adding the function that gets the total mass of all the kinds of particles in the
+            // column
+            // note: the only particles that matter are in index 0 (silt) and 2,3,4 (labile, refractory and roots)
+            particle_masses = sed_stack.get_total_stack_mass_of_each_type(np_types);
+            TimeSeries_Silt.push_back(particle_masses[0]);
+            TimeSeries_Ref.push_back(particle_masses[2]);
+            TimeSeries_Lab.push_back(particle_masses[3]);
+
+
+            // now print the data
+            data_out << SLR << "," << "," << Tidal_Amplitude << ","
+                        << start_depth_frac << "," << yr << ","
+                        << conc_silt << "," << effective_svel << ","
+                        << MHT << "," << MHT-marsh_surface_elevation << ","
+                        << max_depth << ","
+                        << marsh_surface_elevation-marsh_surface_elevation_day0
+                        << "," <<peak_Bmass;
+
+            // print the accretion rate for each particle type
+            for (int i = 0; i< np_types; i++)
+            {
+                data_out << "," << particle_masses[i]-particle_masses_day0[i];
+            }
+            data_out << endl;
+
+            if (yr%2 == 0)
+            {
+                ofstream col_out;
+                col_out_fname = "col_out_" + itoa(yr)+".csv";
+                col_out.open(col_out_fname.c_str());
+                col_out << "layer,masses"<< endl;
+                
+                
+                int ab_pointer_sz = annual_band_layer_top.size();
+                //cout << "n annual bands: " << ab_pointer_sz << endl;
+                vector<double> pm_band;
+                for (int i = 1; i<ab_pointer_sz; i++)
+                {
+                    col_out << i << "," << sed_stack.get_layer_top_elevation(annual_band_layer_top[i]);
+                    pm_band = sed_stack.get_stack_slice_mass_of_each_type(np_types,
+                                                        annual_band_layer_top[i-1]+1,
+                                                annual_band_layer_top[i]);
+                    for (int type = 0; type < np_types; type++)
+                    {
+                        col_out << "," << pm_band[type];
+                    }
+                    col_out << endl;
+                }
+
+                col_out.close();
+            }
+
+
+
+        }		// !! end annual loop
+
+        cout << " ENDING THE LOOP, SLR: " << SLR << endl;
+        data_out.close();
+
+ 
+
+
+        // MK- New function to save time series data
+        ofstream series_out;
+        string fname2_prefix="series.";
+        string fname2_suffix=".txt";
+        string fname2_k=itoa(0);
+        string fname2_b=itoa(0);
+        //    if (kfactor!=0)
+        //    {fname2_k=itoa(1);}
+        //    if (bfactor!=0)
+        //    {fname2_b=itoa(1);}
+        string fname2=fname2_prefix+fname2_k+fname2_b+fname2_suffix;
+        series_out.open(fname2.c_str());
+        //series_out.open("series.txt", ios::out); // This simpler version didn't allow multiple output files for multiple parameters
+        for (int q=0; q<TimeSeries_Yr.size(); q++)
+        {
+            series_out << TimeSeries_Yr[q] << " " << TimeSeries_MHT[q] << " " << TimeSeries_Elevation[q] << " " << TimeSeries_Biomass[q] << " "
+                    << TimeSeries_Silt[q] << " " << TimeSeries_Ref[q] << " " << TimeSeries_Lab[q] << " " << endl;
+        }
+        series_out.close();
+
+        //filename code: 00= no enhanced decay or productivity, 10= enhanced decay only, 01=enhanced prod only, 11=enhanced decay and productivity,
+        ////////////////////
+
+    }
 
 }

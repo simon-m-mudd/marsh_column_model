@@ -63,7 +63,7 @@ using namespace TNT;
 // note that it is assumed the depo_particle is initiated with a sand fraction in the 
 // first element of particle sizes. 
 // the column will actually be made of whatever particle size is in the first element
-sediment_stack initiate_column(depo_particle dpi,double intitial_mass, double mean_tide);
+sediment_stack initiate_column(depo_particle_info dpi,double intitial_mass, double mean_tide);
 
 // this is the function used to calculate deposition
 vector<double> get_trapping_settling(double Tidal_Period, double Tidal_Amplitude,
@@ -113,7 +113,7 @@ double get_slope(double aa, double bb, double alpha_turb, double alpha_zero,
 
 // this gets the peak biomass
 double get_peak_biomass(double surface_elevation, double MHT,
-		   double max_depth, double min_depth, double max_bmass, double temperatureincrease, int yr, double boriginal, double bfactor);
+		   double max_depth, double min_depth, double max_bmass, double temperatureincrease, int yr, double bfactor);
 
 double get_peak_biomass_parab(double surface_elevation, double MHT,
 		   double max_depth, double min_depth, double max_bmass);
